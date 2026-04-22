@@ -1,6 +1,7 @@
 {
   "name": "gpt-image2-prompts",
   "version": "1.0.0",
+  "homepage": "https://xturnvk.github.io/gpt-image2-prompts",
   "private": true,
   "dependencies": {
     "react": "^18.3.1",
