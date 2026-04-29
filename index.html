@@ -1,14 +1,1002 @@
-<!doctype html>
-<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>GPT Image 2 提示词大全</title>
-<link href="/gpt-image2-prompts/static/css/main.830719cb.css" rel="stylesheet">
-<script defer="defer" src="/gpt-image2-prompts/static/js/main.ef5e13b9.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPT-Image-2 提示词画廊</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>" />
+
+  <!-- React 18 via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a2e;
+      --bg-card-hover: #222240;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888aa;
+      --text-muted: #555577;
+      --accent: #6c63ff;
+      --accent-hover: #7b73ff;
+      --accent-glow: rgba(108, 99, 255, 0.3);
+      --border: #2a2a3e;
+      --danger: #ff4757;
+      --success: #2ed573;
+      --warning: #ffa502;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f5f5fa;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f0f0f8;
+      --text-primary: #1a1a2e;
+      --text-secondary: #666688;
+      --text-muted: #9999aa;
+      --border: #e0e0ee;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+        'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      outline: none;
+    }
+
+    input, textarea {
+      font-family: inherit;
+      outline: none;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+  </style>
 </head>
 <body>
-<noscript>请启用 JavaScript 以查看此网站。</noscript>
-<div id="root"></div>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    // ===== 分类定义 =====
+    const CATEGORIES = [
+      { name: 'profile-avatar', icon: '👤', color: '#3b82f6', label: '头像' },
+      { name: 'social-media-post', icon: '📱', color: '#ec4899', label: '社交媒体' },
+      { name: 'infographic-edu-visual', icon: '📊', color: '#f59e0b', label: '信息图' },
+      { name: 'youtube-thumbnail', icon: '🎬', color: '#ef4444', label: 'YouTube 缩略图' },
+      { name: 'comic-storyboard', icon: '📖', color: '#8b5cf6', label: '漫画/分镜' },
+      { name: 'product-marketing', icon: '🛍️', color: '#10b981', label: '产品营销' },
+      { name: 'ecommerce-main-image', icon: '🏪', color: '#06b6d4', label: '电商主图' },
+      { name: 'game-asset', icon: '🎮', color: '#f97316', label: '游戏素材' },
+      { name: 'poster-flyer', icon: '📋', color: '#a855f7', label: '海报' },
+      { name: 'app-web-design', icon: '💻', color: '#6366f1', label: 'App/Web设计' },
+      { name: 'photography', icon: '📸', color: '#64748b', label: '摄影' },
+      { name: 'cinematic-film-still', icon: '🎞️', color: '#78716c', label: '电影风格' },
+      { name: 'anime-manga', icon: '🎌', color: '#f472b6', label: '动漫' },
+      { name: 'illustration', icon: '🎨', color: '#fb923c', label: '插画' },
+      { name: 'sketch-line-art', icon: '✏️', color: '#94a3b8', label: '素描' },
+      { name: '3d-render', icon: '🧊', color: '#22d3ee', label: '3D 渲染' },
+      { name: 'pixel-art', icon: '👾', color: '#a78bfa', label: '像素艺术' },
+      { name: 'oil-painting', icon: '🖼️', color: '#d97706', label: '油画' },
+      { name: 'watercolor', icon: '💧', color: '#0ea5e9', label: '水彩' },
+      { name: 'ink-chinese-style', icon: '🖌️', color: '#059669', label: '水墨中国风' },
+      { name: 'portrait-selfie', icon: '🤳', color: '#e11d48', label: '人像' },
+      { name: 'character', icon: '🦸', color: '#7c3aed', label: '角色' },
+      { name: 'product', icon: '📦', color: '#2563eb', label: '产品' },
+      { name: 'food-drink', icon: '🍜', color: '#ea580c', label: '美食' },
+      { name: 'animal-creature', icon: '🐾', color: '#16a34a', label: '动物' },
+      { name: 'vehicle', icon: '🚗', color: '#475569', label: '交通工具' },
+      { name: 'architecture-interior', icon: '🏠', color: '#854d0e', label: '建筑' },
+      { name: 'landscape-nature', icon: '🌄', color: '#15803d', label: '风景' },
+      { name: 'cityscape-street', icon: '🌃', color: '#4338ca', label: '城市街景' },
+      { name: 'abstract-background', icon: '🌈', color: '#be185d', label: '抽象背景' },
+    ];
+
+    // ===== 提示词数据 =====
+    const PROMPTS = [
+      {
+        id: '1',
+        title: 'VR Headset Exploded View Poster',
+        prompt: '{"type": "exploded view product diagram poster", "subject": "VR headset", "style": "clean high-tech 3D render, studio lighting, glowing accents", "layout": {"centerpiece": "vertically stacked exploded view of a VR headset showing 9 distinct layers", "callout_labels": {"count": 8}}}',
+        imageUrl: 'https://cms-assets.youmind.com/media/1776658772018_lukyfw_HGSUfldbIAEiMWZ.jpg',
+        description: '生成一张高科技 VR 耳机爆炸视图海报，带有详细的组件标注和促销文字',
+        author: 'wory',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['product-marketing', '3d-render'],
+        featured: true,
+        raycastFriendly: true,
+        published: '2026-04-19'
+      },
+      {
+        id: '2',
+        title: 'Illustrated City Food Map',
+        prompt: '{"type": "illustrated map infographic", "style": "watercolor and ink hand-drawn illustration on vintage parchment", "title_section": {"text": "成都 吃货暴走地图", "mascot": "cartoon red chili pepper wearing sunglasses"}, "layout": {"background": "textured beige parchment paper", "sections": [{"title": "landmarks", "count": 6}, {"title": "food_spots", "count": 12}]}}',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '手绘水彩风格的旅游地图，带有编号的地方美食、地标和图例',
+        author: 'wory',
+        source: 'Twitter',
+        language: 'zh',
+        categories: ['infographic-edu-visual', 'food-drink', 'illustration'],
+        featured: true,
+        raycastFriendly: true,
+        published: '2026-04-18'
+      },
+      {
+        id: '3',
+        title: 'Cyberpunk Character Portrait',
+        prompt: 'A hyper-detailed cyberpunk character portrait. Neon-lit street at night, rain reflections on wet pavement. Character with glowing cybernetic eyes, holographic tattoo on cheek, wearing tech-wear jacket with LED strips. Cinematic lighting, volumetric fog, 85mm lens style',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '赛博朋克风格角色肖像，霓虹灯夜景，雨夜地面反射，角色有发光的义眼和全息纹身',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['portrait-selfie', 'cyberpunk-sci-fi', 'character'],
+        featured: false,
+        published: '2026-04-15'
+      },
+      {
+        id: '4',
+        title: 'Anime Studio Ghibli Style Scene',
+        prompt: 'Studio Ghibli style illustration of a magical forest scene. Ancient oak tree with glowing mushrooms, a small forest spirit with big eyes peeking from behind a root, fireflies creating light trails. Soft pastel colors, warm golden hour lighting, hand-painted background style, Hayao Miyazaki aesthetic',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '吉卜力风格的魔法森林场景，发光蘑菇的小森林精灵，萤火虫光轨，温暖的金色时间灯光',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['anime-manga', 'illustration', 'landscape-nature'],
+        featured: false,
+        published: '2026-04-14'
+      },
+      {
+        id: '5',
+        title: 'Product Marketing - Smart Watch',
+        prompt: '{"type": "product marketing image", "product": "smart watch", "scene": "floating in mid-air with dynamic energy lines", "style": "minimalist commercial photography, bright white background, dramatic side lighting", "features": [{"label": "Always-on display", "icon": "⌚"}, {"label": "Heart rate monitor", "icon": "❤️"}, {"label": "7-day battery", "icon": "🔋"}], "text": "REDEFINE YOUR DAY"}',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '智能手表产品营销图，悬浮在空中的极简商业摄影风格',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['product-marketing', 'ecommerce-main-image', '3d-render'],
+        featured: false,
+        raycastFriendly: true,
+        published: '2026-04-12'
+      },
+      {
+        id: '6',
+        title: 'Chinese Ink Landscape Painting',
+        prompt: 'Traditional Chinese ink wash landscape painting (水墨山水画). Misty mountains rising from the sea, a lone fisherman in a small sampan boat, cypress trees on rocky outcrops. Black ink on rice paper texture, subtle gray wash gradients, red seal stamp in corner. Wang Meng style, classical composition with negative space',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '传统中国水墨山水画，雾中的山峦、独渔小舟、松石，纸本墨色渲染',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'zh',
+        categories: ['ink-chinese-style', 'landscape-nature', 'illustration'],
+        featured: true,
+        published: '2026-04-10'
+      },
+      {
+        id: '7',
+        title: 'YouTube Thumbnail - Tech Review',
+        prompt: 'YouTube thumbnail design for tech review video. Split composition: left side shows a damaged phone with X mark, right side shows a pristine phone with check mark. Bold text at top: "DON\'T BUY THIS! 😱". Vibrant red arrow pointing to phone, explosion effect on damaged side, clean studio lighting, high contrast',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: 'YouTube 科技评测缩略图设计，左右对比构图，醒目文字',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['youtube-thumbnail', 'product-marketing'],
+        featured: false,
+        published: '2026-04-08'
+      },
+      {
+        id: '8',
+        title: '3D Isometric Game Asset Pack',
+        prompt: '{"type": "isometric game asset pack", "style": "3D rendered, cute chibi style, soft pastel colors, smooth matte materials", "scene": "miniature island with 4 buildings: cozy cafe, bookshop, flower shop, and bakery", "elements": [{"type": "trees", "count": 6}, {"type": "pathway", "material": "cobblestone"}, {"type": "fountain", "style": "classic"}], "lighting": "soft ambient, warm afternoon sun, gentle shadows"}',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '3D 等距视角游戏资产包，Q版风格的小岛场景，包含咖啡厅、书店、花店和面包店',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['game-asset', '3d-render', 'isometric'],
+        featured: false,
+        raycastFriendly: true,
+        published: '2026-04-06'
+      },
+      {
+        id: '9',
+        title: 'Watercolor Food Photography',
+        prompt: 'A watercolor illustration of a bento box meal. Top-down flat lay. Sushi rolls, grilled salmon, tamagoyaki, pickled vegetables, edamame. White ceramic bento box on light wood table. Soft watercolor washes, delicate brush strokes, food photography composition with gentle shadows',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '水彩风格的便当美食图，俯拍视角，寿司、烤三文鱼、玉子烧',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['food-drink', 'watercolor', 'illustration'],
+        featured: false,
+        published: '2026-04-05'
+      },
+      {
+        id: '10',
+        title: 'Oil Painting Portrait',
+        prompt: 'Oil painting portrait of an elderly fisherman, weathered face with deep wrinkles, weathered skin texture, wearing a red wool cap and yellow raincoat. Canvas texture visible, thick impasto strokes, warm amber and ochre tones. Rembrandt-style dramatic chiaroscuro lighting, dark moody background',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '油画风格的老渔民肖像，饱经风霜的面孔，红色羊毛帽，伦勃朗式戏剧性光影',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['portrait-selfie', 'oil-painting', 'photography'],
+        featured: false,
+        published: '2026-04-03'
+      },
+      {
+        id: '11',
+        title: 'Pixel Art RPG Scene',
+        prompt: 'Pixel art RPG game scene. 16-bit style medieval village at dusk. Cobblestone streets, thatched-roof cottages with glowing windows, a blacksmith with fire visible inside, a tavern with wooden sign, stone church tower in background. 32x32 tile aesthetic, warm orange and blue color palette, cozy atmosphere',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '像素艺术 RPG 游戏场景，16位风格的中世纪村庄，石板路、茅草屋顶小屋',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['game-asset', 'pixel-art', 'architecture-interior'],
+        featured: false,
+        published: '2026-04-01'
+      },
+      {
+        id: '12',
+        title: 'Infographic - AI Timeline',
+        prompt: '{"type": "infographic", "title": "The Evolution of AI", "style": "modern flat design, clean typography, blue and purple gradient", "timeline": [{"year": "1950", "event": "Turing Test"}, {"year": "1997", "event": "Deep Blue"}, {"year": "2012", "event": "Deep Learning"}, {"year": "2022", "event": "LLMs"}, {"year": "2024", "event": "Multimodal"}, {"year": "2026", "event": "Reasoning AI"}], "layout": "horizontal timeline with connected nodes"}',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '现代扁平设计风格的 AI 发展时间线信息图',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['infographic-edu-visual', 'diagram-chart'],
+        featured: false,
+        raycastFriendly: true,
+        published: '2026-03-28'
+      },
+      {
+        id: '13',
+        title: 'Minimalist Poster Design',
+        prompt: 'Minimalist poster design for a jazz music festival. Single thick black line drawing of a saxophone that transforms into a musical staff. Large bold sans-serif typography at bottom: "JAZZ FEST 2026". Cream background, one accent color (golden yellow) used sparingly. Swiss design principles, Bauhaus influence',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '极简主义爵士音乐节海报设计，单线萨克斯管图形，瑞士设计风格',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['poster-flyer', 'minimalism', 'illustration'],
+        featured: false,
+        published: '2026-03-25'
+      },
+      {
+        id: '14',
+        title: 'Sci-Fi Vehicle Design',
+        prompt: 'A futuristic hover vehicle design, sleek aerodynamic body with glowing blue propulsion engines. Floating above a neon-lit cityscape at night. Cyberpunk aesthetic, reflections on wet surfaces. Photorealistic 3D render with octane render quality, depth of field, cinematic composition',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '未来悬浮车辆设计，赛博朋克风格，城市夜景，3D 渲染质量',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['vehicle', 'cyberpunk-sci-fi', '3d-render'],
+        featured: false,
+        published: '2026-03-22'
+      },
+      {
+        id: '15',
+        title: 'Character Sheet - Fantasy Warrior',
+        prompt: '{"type": "character design sheet", "character": "female fantasy warrior", "style": "anime/manga art style, clean lineart, flat color rendering", "poses": [{"name": "front view", "detail": "standing combat stance with sword"}, {"name": "side view", "detail": "walking with shield"}, {"name": "action pose", "detail": "sword slash dynamic"}, {"name": "face expressions", "count": 4}], "outfit": {"armor": "silver plate with blue gem accents", "weapon": "longsword", "accessories": "flowing blue cape"}}',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '女性奇幻战士角色设定表，多姿势多角度展示',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['character', 'anime-manga', 'game-asset'],
+        featured: false,
+        raycastFriendly: true,
+        published: '2026-03-20'
+      },
+      {
+        id: '16',
+        title: 'Social Media Post - Coffee Shop',
+        prompt: 'Instagram post design for artisan coffee shop. Close-up of a latte art cup with perfect heart design, steam rising, surrounded by fresh pastries on rustic wooden table. Warm moody lighting, bokeh background of coffee shop interior. Elegant serif typography: "Crafted with Love". Earthy color palette, cozy aesthetic',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '手冲咖啡馆 Instagram 社交帖子设计，拿铁拉花艺术，温暖氛围',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['social-media-post', 'food-drink', 'photography'],
+        featured: false,
+        published: '2026-03-18'
+      },
+      {
+        id: '17',
+        title: 'Architecture - Futuristic House',
+        prompt: 'A futuristic sustainable house built into a mountainside. Curved white concrete walls with floor-to-ceiling glass panels. Lush vertical gardens on exterior walls. Solar panel integration with glass architecture. Infinity pool blending into mountain valley below. Golden hour photography style, hyperrealistic architectural visualization, clean and minimal',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '建在山体中的未来可持续住宅，曲线白色混凝土，落地玻璃，垂直花园',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['architecture-interior', 'landscape-nature', '3d-render'],
+        featured: false,
+        published: '2026-03-15'
+      },
+      {
+        id: '18',
+        title: 'Retro Vaporwave Aesthetic',
+        prompt: 'Retro vaporwave aesthetic scene. Classical Greek marble statue with neon pink and blue lighting, palm tree silhouettes, gradient sunset sky (magenta to cyan). Geometric grid floor stretching to horizon. Palm tree shadows, palm leaves, Japanese text elements floating. 1980s retro-futurism, synthwave color palette, glitch art effects',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '复古 vaporwave 美学场景，希腊大理石雕像配霓虹灯光，渐变日落天空',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['retro-vintage', 'abstract-background', '3d-render'],
+        featured: false,
+        published: '2026-03-12'
+      },
+      {
+        id: '19',
+        title: 'Comic Panel - Action Scene',
+        prompt: 'Dynamic comic book action panel. A superhero landing in a crouched pose, concrete cracking beneath feet, debris flying outward in slow motion. Speech bubble with "BOOM!". Bold black outlines, halftone dot shading, vibrant primary colors (red, blue, yellow). Dramatic perspective from low angle, speed lines radiating from impact point',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '动态漫画动作场景，超级英雄着陆姿势，混凝土碎裂，速度线效果',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['comic-storyboard', 'comic-graphic-novel', 'character'],
+        featured: false,
+        published: '2026-03-10'
+      },
+      {
+        id: '20',
+        title: 'Abstract Background - Gradient Mesh',
+        prompt: 'Abstract gradient mesh background. Flowing organic shapes in warm coral, peach, and soft gold tones. Smooth color transitions creating depth and dimension. Soft shadows and highlights giving a 3D feeling. Clean and modern aesthetic suitable for web design, app backgrounds, or presentation slides. 4K resolution style',
+        imageUrl: 'https://cms-assets.youmind.com/media/gpt-image-2-prompts-cover-en.png',
+        description: '抽象渐变网格背景，珊瑚色、桃色和金色流动有机形状，适合网页设计',
+        author: 'Community',
+        source: 'Twitter',
+        language: 'en',
+        categories: ['abstract-background', 'minimalism', 'app-web-design'],
+        featured: false,
+        published: '2026-03-08'
+      }
+    ];
+
+    // ===== Card 组件 =====
+    function Card({ prompt, isFavorite, onClick, onToggleFavorite, darkMode }) {
+      const [imgLoaded, setImgLoaded] = useState(false);
+      const [imgError, setImgError] = useState(false);
+      const [hovered, setHovered] = useState(false);
+
+      const previewText = prompt.prompt?.slice(0, 120) + (prompt.prompt?.length > 120 ? '...' : '') || '';
+
+      return (
+        <div
+          onClick={onClick}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '14px',
+            overflow: 'hidden',
+            cursor: 'pointer',
+            transition: 'all 0.25s ease',
+            border: `1px solid ${hovered ? 'rgba(108, 99, 255, 0.4)' : 'var(--border)'}`,
+            transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+            boxShadow: hovered ? '0 12px 40px rgba(0,0,0,0.3)' : 'none',
+          }}
+        >
+          {/* 图片区域 */}
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            paddingTop: '65%',
+            background: 'var(--bg-secondary)',
+            overflow: 'hidden',
+          }}>
+            {!imgError ? (
+              <img
+                src={prompt.imageUrl}
+                alt={prompt.title}
+                loading="lazy"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgError(true)}
+                style={{
+                  position: 'absolute',
+                  top: 0, left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  opacity: imgLoaded ? 1 : 0,
+                  transition: 'opacity 0.3s ease',
+                }}
+              />
+            ) : null}
+
+            {!imgLoaded && !imgError && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--bg-card)',
+              }}>
+                <div style={{
+                  width: '24px', height: '24px',
+                  border: '3px solid var(--border)',
+                  borderTopColor: 'var(--accent)',
+                  borderRadius: '50%',
+                  animation: 'pulse 1s infinite',
+                }} />
+              </div>
+            )}
+
+            {imgError && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(135deg, #1a1a2e, #222240)',
+                color: 'var(--text-muted)', fontSize: '32px',
+              }}>
+                🎨
+              </div>
+            )}
+
+            {/* 标签 */}
+            <div style={{
+              position: 'absolute', top: '10px', left: '10px',
+              display: 'flex', gap: '6px',
+            }}>
+              {prompt.featured && (
+                <span style={{
+                  padding: '3px 8px', borderRadius: '6px',
+                  background: 'linear-gradient(135deg, #f59e0b, #eab308)',
+                  color: '#fff', fontSize: '10px', fontWeight: 700,
+                }}>
+                  ⭐ 精选
+                </span>
+              )}
+              {prompt.raycastFriendly && (
+                <span style={{
+                  padding: '3px 8px', borderRadius: '6px',
+                  background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                  color: '#fff', fontSize: '10px', fontWeight: 600,
+                }}>
+                  🚀 Raycast
+                </span>
+              )}
+            </div>
+
+            {/* 收藏按钮 */}
+            <button
+              onClick={e => { e.stopPropagation(); onToggleFavorite(); }}
+              style={{
+                position: 'absolute', top: '10px', right: '10px',
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '16px', border: 'none',
+              }}
+            >
+              {isFavorite ? '❤️' : '🤍'}
+            </button>
+          </div>
+
+          {/* 信息 */}
+          <div style={{ padding: '14px' }}>
+            <h3 style={{
+              fontSize: '14px', fontWeight: 600, lineHeight: 1.4,
+              margin: '0 0 8px',
+              display: '-webkit-box', WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {prompt.title || 'Untitled'}
+            </h3>
+            <p style={{
+              fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5,
+              margin: 0,
+              display: '-webkit-box', WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {previewText}
+            </p>
+
+            {/* 分类标签 */}
+            {(prompt.categories || []).length > 0 && (
+              <div style={{ display: 'flex', gap: '4px', marginTop: '10px', flexWrap: 'wrap' }}>
+                {prompt.categories.slice(0, 3).map(cat => (
+                  <span key={cat} style={{
+                    padding: '2px 8px', borderRadius: '4px',
+                    fontSize: '10px',
+                    background: 'rgba(108, 99, 255, 0.1)',
+                    color: 'var(--accent)',
+                  }}>
+                    {cat}
+                  </span>
+                ))}
+                {(prompt.categories?.length || 0) > 3 && (
+                  <span style={{
+                    padding: '2px 8px', borderRadius: '4px',
+                    fontSize: '10px', color: 'var(--text-muted)',
+                  }}>
+                    +{prompt.categories.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ===== Header 组件 =====
+    function Header({
+      searchQuery, onSearchChange, darkMode, onToggleTheme,
+      showFeaturedOnly, onToggleFeatured, total, filtered, favoritesCount
+    }) {
+      return (
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 100,
+          background: darkMode ? 'rgba(10,10,15,0.85)' : 'rgba(245,245,250,0.85)',
+          backdropFilter: 'blur(16px) saturate(180%)',
+          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+          padding: '16px 24px',
+        }}>
+          <div style={{
+            maxWidth: '1600px', margin: '0 auto',
+            display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
+          }}>
+            {/* Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+              <span style={{ fontSize: '28px' }}>🎨</span>
+              <div>
+                <h1 style={{
+                  fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2,
+                }}>
+                  GPT-Image-2 提示词画廊
+                </h1>
+                <p style={{
+                  fontSize: '11px', color: 'var(--text-muted)', margin: 0,
+                }}>
+                  {total} 个提示词 · {favoritesCount} 个收藏
+                </p>
+              </div>
+            </div>
+
+            {/* 搜索 */}
+            <div style={{ flex: '1 1 300px', maxWidth: '560px', position: 'relative' }}>
+              <span style={{
+                position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+                fontSize: '16px', opacity: 0.5, pointerEvents: 'none',
+              }}>🔍</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => onSearchChange(e.target.value)}
+                placeholder="搜索提示词、描述、作者..."
+                style={{
+                  width: '100%', padding: '10px 14px 10px 40px',
+                  borderRadius: '10px', border: '1px solid var(--border)',
+                  background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  color: 'var(--text-primary)', fontSize: '14px',
+                  transition: 'all 0.25s ease',
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'var(--accent)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(108, 99, 255, 0.3)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'var(--border)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+
+            {/* 按钮 */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={onToggleFeatured}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+                  background: showFeaturedOnly ? 'var(--accent)' : 'transparent',
+                  color: showFeaturedOnly ? '#fff' : 'var(--text-secondary)',
+                  border: `1px solid ${showFeaturedOnly ? 'var(--accent)' : 'var(--border)'}`,
+                  transition: 'all 0.25s ease',
+                }}
+              >
+                ⭐ 精选 ({total > 0 ? filtered : 0})
+              </button>
+              <button
+                onClick={onToggleTheme}
+                style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'transparent', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)', transition: 'all 0.25s ease',
+                }}
+                title={darkMode ? '切换亮色' : '切换暗色'}
+              >
+                {darkMode ? '☀️' : '🌙'}
+              </button>
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    // ===== CategoryFilter 组件 =====
+    function CategoryFilter({ selected, onSelect }) {
+      const [hovered, setHovered] = useState(null);
+
+      return (
+        <div style={{
+          padding: '12px 24px', display: 'flex', gap: '8px',
+          overflowX: 'auto', maxWidth: '100%',
+          scrollbarWidth: 'none',
+        }}>
+          <button
+            onClick={() => onSelect(null)}
+            style={{
+              padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 500,
+              whiteSpace: 'nowrap',
+              background: selected === null ? 'var(--accent)' : 'transparent',
+              color: selected === null ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${selected === null ? 'var(--accent)' : 'var(--border)'}`,
+              transition: 'all 0.25s ease',
+            }}
+          >
+            全部
+          </button>
+
+          {CATEGORIES.map(cat => {
+            const isActive = selected === cat.name;
+            const isHovered = hovered === cat.name;
+
+            return (
+              <button
+                key={cat.name}
+                onClick={() => onSelect(isActive ? null : cat.name)}
+                onMouseEnter={() => setHovered(cat.name)}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  background: isActive ? cat.color : isHovered ? `${cat.color}22` : 'transparent',
+                  color: isActive ? '#fff' : isHovered ? cat.color : 'var(--text-secondary)',
+                  border: `1px solid ${isActive ? cat.color : 'var(--border)'}`,
+                  transition: 'all 0.25s ease',
+                  transform: isHovered && !isActive ? 'scale(1.05)' : 'scale(1)',
+                }}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ===== PromptDetail 组件 =====
+    function PromptDetail({ prompt, onBack, isFavorite, onToggleFavorite }) {
+      const [copied, setCopied] = useState(false);
+
+      const handleCopy = async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.prompt || '');
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = prompt.prompt || '';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+      };
+
+      return (
+        <div className="animate-fade-in" style={{
+          maxWidth: '1200px', margin: '0 auto', padding: '24px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px',
+          minHeight: 'calc(100vh - 80px)',
+        }}>
+          {/* 左侧 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <button
+              onClick={onBack}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+                background: 'transparent', color: 'var(--text-secondary)',
+                border: '1px solid var(--border)', transition: 'all 0.25s ease',
+                width: 'fit-content',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
+              ← 返回画廊
+            </button>
+
+            {/* 图片 */}
+            <div style={{
+              borderRadius: '16px', overflow: 'hidden',
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              minHeight: '300px', maxHeight: '600px',
+            }}>
+              <img
+                src={prompt.imageUrl}
+                alt={prompt.title}
+                style={{ width: '100%', height: 'auto', maxHeight: '600px', objectFit: 'contain', display: 'block' }}
+                onError={e => {
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-muted);font-size:48px;">🎨</div>';
+                }}
+              />
+            </div>
+
+            {/* 元信息 */}
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-muted)' }}>
+              {prompt.author && <span>✍️ {prompt.author}</span>}
+              {prompt.published && <span>📅 {prompt.published}</span>}
+              {prompt.language && <span>🌐 {prompt.language.toUpperCase()}</span>}
+            </div>
+
+            {/* 分类 */}
+            {(prompt.categories || []).length > 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {prompt.categories.map(cat => (
+                  <span key={cat} style={{
+                    padding: '4px 10px', borderRadius: '6px', fontSize: '11px',
+                    background: 'rgba(108, 99, 255, 0.1)', color: 'var(--accent)', fontWeight: 500,
+                  }}>
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 右侧 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <h2 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.3, marginBottom: '8px' }}>
+                {prompt.title || 'Untitled'}
+              </h2>
+              {prompt.description && (
+                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  {prompt.description}
+                </p>
+              )}
+            </div>
+
+            {/* Prompt 代码块 */}
+            <div style={{
+              position: 'relative', background: 'var(--bg-card)',
+              borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden',
+            }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 16px', borderBottom: '1px solid var(--border)',
+              }}>
+                <span style={{
+                  fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)',
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  📝 Prompt
+                </span>
+                <button
+                  onClick={handleCopy}
+                  style={{
+                    padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 500,
+                    background: copied ? 'var(--success)' : 'var(--accent)',
+                    color: '#fff', transition: 'all 0.25s ease',
+                  }}
+                >
+                  {copied ? '✅ 已复制' : '📋 复制'}
+                </button>
+              </div>
+              <div style={{ padding: '16px', maxHeight: '400px', overflow: 'auto' }}>
+                <pre style={{
+                  fontSize: '13px', lineHeight: 1.7, color: 'var(--text-primary)',
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+                }}>
+                  {prompt.prompt}
+                </pre>
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={onToggleFavorite}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+                  background: isFavorite ? 'linear-gradient(135deg, #ff6b6b, #ee5a24)' : 'var(--bg-card)',
+                  color: isFavorite ? '#fff' : 'var(--text-secondary)',
+                  border: isFavorite ? 'none' : '1px solid var(--border)',
+                  transition: 'all 0.25s ease',
+                }}
+              >
+                {isFavorite ? '❤️ 已收藏' : '🤍 收藏'}
+              </button>
+              {prompt.source && prompt.author && (
+                <button style={{
+                  padding: '12px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500,
+                  background: 'var(--bg-card)', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)', transition: 'all 0.25s ease',
+                }}>
+                  🔗 {prompt.author} · {prompt.source}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ===== 主 App =====
+    function App() {
+      const [searchQuery, setSearchQuery] = useState('');
+      const [selectedCategory, setSelectedCategory] = useState(null);
+      const [selectedPrompt, setSelectedPrompt] = useState(null);
+      const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+      const [favorites, setFavorites] = useState(() => {
+        try { return new Set(JSON.parse(localStorage.getItem('gpt-image-favs') || '[]')); }
+        catch { return new Set(); }
+      });
+
+      const [darkMode, setDarkMode] = useState(() => {
+        const saved = localStorage.getItem('gpt-image-theme');
+        return saved ? saved === 'dark' : true;
+      });
+
+      // 应用主题
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        localStorage.setItem('gpt-image-theme', darkMode ? 'dark' : 'light');
+      }, [darkMode]);
+
+      const toggleFavorite = (id) => {
+        const next = new Set(favorites);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setFavorites(next);
+        localStorage.setItem('gpt-image-favs', JSON.stringify(Array.from(next)));
+      };
+
+      const filteredPrompts = useMemo(() => {
+        let result = PROMPTS;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          result = result.filter(p =>
+            p.title?.toLowerCase().includes(q) ||
+            p.prompt?.toLowerCase().includes(q) ||
+            p.description?.toLowerCase().includes(q) ||
+            p.author?.toLowerCase().includes(q)
+          );
+        }
+        if (selectedCategory) {
+          result = result.filter(p => (p.categories || []).includes(selectedCategory));
+        }
+        if (showFeaturedOnly) {
+          result = result.filter(p => p.featured);
+        }
+        return result;
+      }, [searchQuery, selectedCategory, showFeaturedOnly]);
+
+      return (
+        <div style={{ minHeight: '100vh' }}>
+          <Header
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            darkMode={darkMode}
+            onToggleTheme={() => setDarkMode(!darkMode)}
+            showFeaturedOnly={showFeaturedOnly}
+            onToggleFeatured={() => setShowFeaturedOnly(!showFeaturedOnly)}
+            total={PROMPTS.length}
+            filtered={filteredPrompts.length}
+            favoritesCount={favorites.size}
+          />
+
+          {!selectedPrompt && (
+            <CategoryFilter
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+          )}
+
+          {selectedPrompt && (
+            <PromptDetail
+              prompt={selectedPrompt}
+              onBack={() => setSelectedPrompt(null)}
+              isFavorite={favorites.has(selectedPrompt.id)}
+              onToggleFavorite={() => toggleFavorite(selectedPrompt.id)}
+            />
+          )}
+
+          {!selectedPrompt && (
+            <div style={{
+              padding: '0 24px 60px',
+              columns: '4 280px', columnGap: '20px',
+            }}>
+              {filteredPrompts.map((prompt, i) => (
+                <div
+                  key={prompt.id}
+                  className="animate-fade-in"
+                  style={{
+                    breakInside: 'avoid', marginBottom: '20px',
+                    animationDelay: `${Math.min(i * 30, 400)}ms`,
+                  }}
+                >
+                  <Card
+                    prompt={prompt}
+                    isFavorite={favorites.has(prompt.id)}
+                    onClick={() => setSelectedPrompt(prompt)}
+                    onToggleFavorite={() => toggleFavorite(prompt.id)}
+                  />
+                </div>
+              ))}
+
+              {filteredPrompts.length === 0 && (
+                <div style={{
+                  gridColumn: '1 / -1', textAlign: 'center',
+                  padding: '80px 20px', color: 'var(--text-muted)',
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+                  <div style={{ fontSize: '18px' }}>没有找到匹配的提示词</div>
+                  <div style={{ fontSize: '14px', marginTop: '8px' }}>
+                    试试其他关键词或清除过滤器
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // 挂载
+    const root = document.getElementById('root');
+    if (root) {
+      ReactDOM.createRoot(root).render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    }
+  </script>
 </body>
 </html>
